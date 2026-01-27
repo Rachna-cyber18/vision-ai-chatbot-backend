@@ -1,59 +1,45 @@
-const express = require("express");
-const cors = require("cors");
-const fs = require("fs");
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import fs from "fs";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
 /* ===============================
-   ROOT ROUTE (Render health check)
+   ROOT ROUTE (IMPORTANT FOR RENDER)
    =============================== */
 app.get("/", (req, res) => {
   res.send("Clinic AI Backend Running");
 });
 
 /* ===============================
-   AI CHAT ROUTE
+   ASK AI ROUTE
    =============================== */
 app.post("/ask", async (req, res) => {
+  const { question } = req.body;
+
+  if (!question) {
+    return res.json({ reply: "Please ask a valid question." });
+  }
+
   try {
-    const { question } = req.body;
+    // 🔹 MOCK AI RESPONSE (stable & fast)
+    const aiResponse = `You asked: "${question}". Our clinic will assist you shortly.`;
 
-    if (!question) {
-      return res.json({ reply: "Please ask a question." });
-    }
-
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: question
-      })
-    });
-
-    const data = await response.json();
-
-    const aiReply =
-      data?.output?.[0]?.content?.[0]?.text ||
-      "Sorry, I could not respond right now.";
-
-    res.json({ reply: aiReply });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ reply: "Server busy, please try again." });
+    res.json({ reply: aiResponse });
+  } catch (err) {
+    res.json({ reply: "Server busy. Please try again." });
   }
 });
 
 /* ===============================
-   APPOINTMENT ROUTE
+   BOOK APPOINTMENT ROUTE
    =============================== */
 app.post("/appointment", (req, res) => {
   const { name, phone, date } = req.body;
@@ -62,23 +48,37 @@ app.post("/appointment", (req, res) => {
     return res.json({ message: "All fields are required" });
   }
 
-  const appointment = { name, phone, date };
-  let data = [];
+  const newAppointment = { name, phone, date };
 
+  let appointments = [];
   if (fs.existsSync("appointments.json")) {
-    data = JSON.parse(fs.readFileSync("appointments.json"));
+    appointments = JSON.parse(fs.readFileSync("appointments.json"));
   }
 
-  data.push(appointment);
-  fs.writeFileSync("appointments.json", JSON.stringify(data, null, 2));
+  appointments.push(newAppointment);
+  fs.writeFileSync("appointments.json", JSON.stringify(appointments, null, 2));
 
-  res.json({ message: "Appointment booked successfully" });
+  res.json({
+    reply: "Appointment booked successfully",
+    appointment: "Booked successfully"
+  });
+});
+
+/* ===============================
+   VIEW APPOINTMENTS ROUTE
+   =============================== */
+app.get("/appointments", (req, res) => {
+  if (!fs.existsSync("appointments.json")) {
+    return res.json([]);
+  }
+
+  const data = JSON.parse(fs.readFileSync("appointments.json"));
+  res.json(data);
 });
 
 /* ===============================
    START SERVER
    =============================== */
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log("Server running on port " + PORT);
 });
