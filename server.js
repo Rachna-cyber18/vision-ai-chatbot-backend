@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 
@@ -10,6 +11,11 @@ app.use(cors());
 app.use(express.json());
 
 // =========================
+// SERVE FRONTEND (IMPORTANT)
+// =========================
+app.use(express.static(path.join(__dirname, "public")));
+
+// =========================
 // IN-MEMORY STORAGE
 // =========================
 let appointments = [];
@@ -18,7 +24,7 @@ let appointments = [];
 // HEALTH CHECK
 // =========================
 app.get("/", (req, res) => {
-  res.send("Clinic AI Backend is running ✅");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // =========================
@@ -64,9 +70,7 @@ app.post("/ask", (req, res) => {
     const question = (req.body.question || "").toLowerCase().trim();
 
     if (!question) {
-      return res.json({
-        reply: "Please ask a question 😊"
-      });
+      return res.json({ reply: "Please ask a question 😊" });
     }
 
     let reply =
@@ -99,6 +103,13 @@ app.post("/ask", (req, res) => {
       reply: "I’m here 😊 Please ask your question again."
     });
   }
+});
+
+// =========================
+// FALLBACK (IMPORTANT)
+// =========================
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // =========================
