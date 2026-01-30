@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinic AI Assistant</title>
+
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #e8f6f3, #f9fcff);
+        }
+        .main-box {
+            width: 480px;
+            background-color: white;
+            border-radius: 14px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+            overflow: hidden;
+            padding-bottom: 20px;
+        }
+        .clinic-header {
+            background-color: #009688;
+            color: white;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .clinic-header img {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .services {
+            display: flex;
+            justify-content: space-around;
+            background-color: #f1fbf9;
+            padding: 12px 0;
+        }
+        .service {
+            text-align: center;
+            font-size: 12px;
+            color: #00695c;
+        }
+        .greeting {
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            color: #00796b;
+        }
+        .actions {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+        }
+        .actions button,
+        .chat-area button,
+        .appointment-box button {
+            background-color: #009688;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .chat-area {
+            padding: 15px;
+        }
+        .chat-area input,
+        .appointment-box input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .output {
+            margin-top: 12px;
+            background-color: #f1fbf9;
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 40px;
+        }
+        .appointment-box {
+            display: none;
+            padding: 15px;
+        }
+        .admin-box {
+            display: none;
+            padding: 10px;
+            background-color: #f1fbf9;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="main-box">
+    <div class="clinic-header">
+        <img src="https://img.icons8.com/color/96/medical-doctor.png">
+        <div>
+            <h2>Sharma Clinic</h2>
+            <p>Dr. A. Sharma (MBBS)</p>
+            <p>Mon–Sat | 9 AM – 7 PM</p>
+        </div>
+    </div>
+
+    <div class="services">
+        <div class="service">OPD</div>
+        <div class="service">Lab</div>
+        <div class="service">Vaccine</div>
+        <div class="service">Consult</div>
+    </div>
+
+    <div class="greeting">👋 Welcome! I’m your Clinic AI Assistant</div>
+
+    <div class="actions">
+        <button onclick="toggleAppointment()">Book Appointment</button>
+        <button onclick="sendQuick('What are the clinic timings?')">Ask AI</button>
+        <button onclick="showAppointments()">View Appointments</button>
+    </div>
+
+    <div class="appointment-box" id="appointmentBox">
+        <input id="name" placeholder="Patient Name">
+        <input id="phone" placeholder="Mobile Number">
+        <input type="date" id="date">
+        <input type="time" id="time">
+        <button onclick="submitAppointment()">Confirm Appointment</button>
+    </div>
+
+    <div class="chat-area">
+        <input id="userInput" placeholder="Type your question">
+        <button onclick="sendMessage()">Ask AI</button>
+        <div class="output" id="output"></div>
+    </div>
+
+    <div class="admin-box" id="adminBox">
+        <table id="appointmentsTable"></table>
+    </div>
+</div>
+
+<script>
+const API_BASE = "https://vision-ai-chatbot-backend-1.onrender.com";
+
+function toggleAppointment() {
+    const box = document.getElementById("appointmentBox");
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+async function submitAppointment() {
+    try {
+        await fetch(`${API_BASE}/appointment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: name.value,
+                phone: phone.value,
+                date: date.value,
+                time: time.value
+            })
+        });
+        output.innerText = "✅ Appointment booked!";
+    } catch {
+        output.innerText = "❌ Server not responding";
+    }
+}
+
+async function sendMessage() {
+    output.innerText = "Thinking...";
+    try {
+        const res = await fetch(`${API_BASE}/ask`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: userInput.value })
+        });
+        const data = await res.json();
+        output.innerText = data.reply;
+    } catch {
+        output.innerText = "⚠️ AI server is down";
+    }
+}
+
+function sendQuick(text) {
+    userInput.value = text;
+    sendMessage();
+}
+
+async function showAppointments() {
+    const adminBox = document.getElementById("adminBox");
+    const table = document.getElementById("appointmentsTable");
+
+    adminBox.style.display = "block";
+    table.innerHTML =
+        "<tr><th>Name</th><th>Phone</th><th>Date</th><th>Time</th></tr>";
+
+    try {
+        const res = await fetch(`${API_BASE}/appointments`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+            table.innerHTML +=
+                "<tr><td colspan='4'>No appointments found</td></tr>";
+            return;
+        }
+
+        data.forEach(a => {
+            table.innerHTML += `
+                <tr>
+                    <td>${a.name}</td>
+                    <td>${a.phone}</td>
+                    <td>${a.date}</td>
+                    <td>${a.time}</td>
+                </tr>`;
+        });
+    } catch {
+        table.innerHTML +=
+            "<tr><td colspan='4'>Server error</td></tr>";
+    }
+}
+</script>
+
+</body>
+</html>
